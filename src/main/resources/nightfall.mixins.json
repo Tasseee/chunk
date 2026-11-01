@@ -1,0 +1,2 @@
+{"required":true,"package":"nightfall.mixin","compatibilityLevel":"JAVA_21",
+"client":["CameraMixin","EntityMixin","KeyboardInputMixin","ViewmodelMixin","SlowSwingMixin","DarkSteelSkyMixin"],"injectors":{"defaultRequire":1}}
