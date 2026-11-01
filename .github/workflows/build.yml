@@ -1,0 +1,63 @@
+name: Build Nightfall Fabric Mod
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build with Java 21
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.2.1"
+
+      - name: Validate project layout
+        shell: bash
+        run: |
+          test -f build.gradle || { echo "ERROR: build.gradle fehlt im Repository-Root."; exit 1; }
+          test -f settings.gradle || { echo "ERROR: settings.gradle fehlt im Repository-Root."; exit 1; }
+          test -f src/main/resources/fabric.mod.json || { echo "ERROR: fabric.mod.json fehlt."; exit 1; }
+
+      - name: Build Fabric mod
+        run: gradle --no-daemon clean build --stacktrace
+
+      - name: Verify mod JAR
+        shell: bash
+        run: |
+          JAR_FILE="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' -print -quit)"
+          if [ -z "$JAR_FILE" ]; then
+            echo "ERROR: Kein Mod-JAR in build/libs gefunden."; exit 1
+          fi
+          echo "Build-Artefakt: $JAR_FILE"
+
+      - name: Upload mod JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nightfall-Minecraft-1.21.11-${{ github.run_number }}
+          path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 14
